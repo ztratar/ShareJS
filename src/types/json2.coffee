@@ -183,16 +183,13 @@ transform = (c, oc, type) ->
           else
             return undefined
         p = updatePathForI c.at, oc.at, type is 'left'
-        if p?
-          return merge(c,{at:p})
+        return merge(c,{at:p})
       when c.at # s, +, x
         p = updatePathForI c.at, oc.at
-        if p?
-          return merge(c,{at:p})
+        return merge(c,{at:p})
       when c.d
         p = updatePathForI c.d, oc.at
-        if p?
-          return {d:p}
+        return {d:p}
       when def(c.m)
         throw 'ahhh'
   else if def(oc.x)
