@@ -186,7 +186,7 @@ exports.node =
 
     test.deepEqual [{i:7,at:[3]}], xf [{i:7,at:[3]}], [{x:4,at:[2]}]
 
-    test.deepEqual [{i:'foo',at:['bar']}], xf [{i:'foo',at:['bar']}], [{i:'baz',at:['bar']}], 'left'
+    test.deepEqual [{x:'foo',at:['bar']}], xf [{i:'foo',at:['bar']}], [{i:'baz',at:['bar']}], 'left'
     test.deepEqual [], xf [{i:'foo',at:['bar']}], [{i:'baz',at:['bar']}], 'right'
 
     test.deepEqual [{d:[4]}], xf [{d:[4]}], [{at:[2],x:3}]
@@ -198,6 +198,9 @@ exports.node =
     test.deepEqual [{at:[3,"the"],x:[]}], xf [{at:[3,"the"],x:[]}], [{at:[2],x:null}], 'right'
 
     test.deepEqual [{at:[4],s:[{p:2,d:'e'}]}], xf [{at:[4],s:[{p:2,d:'e'}]}], [{at:[2],s:[{p:1,d:'nd'}]}]
+
+    test.deepEqual [{x:4,at:['hi']}], xf [{i:4,at:['hi']}], [{i:'a',at:['hi']}], 'left'
+    test.deepEqual [], xf [{i:4,at:['hi']}], [{i:'a',at:['hi']}], 'right'
 
     test.done()
 

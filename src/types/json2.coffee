@@ -73,6 +73,8 @@ json.apply = (snapshot, op) ->
       if typeof key is 'number'
         elem.splice key, 0, clone c.i
       else
+        if key of elem
+          throw new Error "can't insert over existing key. use x instead."
         elem[key] = clone c.i
 
     else if c.d
@@ -125,11 +127,6 @@ updatePathForD = (p, op) ->
 
 updatePathForI = (p, op, meFirst) ->
   p = p[..]
-  if typeof last(op) isnt 'number' and arrayEq(p, op)
-    if meFirst
-      return p
-    else
-      return null
   return p if typeof last(op) isnt 'number'
   if init(op).isPrefixOf(p)
     if last(op) == p[op.length-1]
@@ -179,8 +176,17 @@ transform = (c, oc, type) ->
         throw 'ahhh'
   else if def(oc.i)
     switch
-      when c.at # i, s, +, x
-        p = updatePathForI c.at, oc.at, def(c.i) and type is 'left'
+      when def c.i
+        if typeof last(oc.at) isnt 'number' and arrayEq(c.at, oc.at)
+          if type is 'left'
+            return {x:c.i,at:c.at}
+          else
+            return undefined
+        p = updatePathForI c.at, oc.at, type is 'left'
+        if p?
+          return merge(c,{at:p})
+      when c.at # s, +, x
+        p = updatePathForI c.at, oc.at
         if p?
           return merge(c,{at:p})
       when c.d
