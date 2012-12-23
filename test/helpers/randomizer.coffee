@@ -2,9 +2,11 @@ assert = require 'assert'
 helpers = require './misc'
 util = require 'util'
 p = -> #util.debug
-i = -> #util.inspect
+i = -> #(o) -> util.inspect o, false, 5, true
 
 {randomInt, randomReal, seed} = helpers
+
+clone = (o) -> JSON.parse(JSON.stringify(o))
 
 # Returns client result
 testRandomOp = (type, initialDoc = type.create()) ->
@@ -30,8 +32,15 @@ testRandomOp = (type, initialDoc = type.create()) ->
 
   # First, test type.apply.
   testApply = (doc) ->
+    initialDoc_clone = clone initialDoc
+    doc_clone = clone doc
     s = initialDoc
-    s = type.apply s, op for op in doc.ops
+    for op in doc.ops
+      s = type.apply s, op
+      # assert that apply leaves the initial stuff unchanged.
+      assert.deepEqual initialDoc_clone, initialDoc, 'initial'
+      assert.deepEqual doc_clone.ops, doc.ops, 'ops'
+      assert.deepEqual doc_clone.result, doc.result, 'result'
 
     checkSnapshotsEq s, doc.result
   
