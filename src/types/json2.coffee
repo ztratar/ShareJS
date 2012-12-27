@@ -136,13 +136,57 @@ updatePathForI = (p, op, meFirst) ->
       p[op.length-1]++
   return p
 
-updatePathForM = (p, mfrom, mto, meFirst) ->
-  # this assumes the updated op is not also an m, there be dragons
-  p = updatePathForD p, mfrom
-  mto = updatePathForD mto, mfrom
-  p = updatePathForI p, mto, meFirst
-  p
+updatePathForM = (p, from, to) ->
+  throw 'bad move' if from.length is 0 or to.length is 0
+  p = p[..]
+  return p if p.length is 0
+  if from.isPrefixOf(p)
+    p = to.concat p[from.length..]
+  else
+    if typeof last(to) isnt 'number' and to.isPrefixOf(p)
+      return
+    p = updatePathForD p, from
+    return unless p?
+    to = updatePathForD to, from
+    p = updatePathForI p, to
+  return p
 
+updateLMForLM = (from, to, otherFrom, otherTo, type) ->
+  fromP = from
+  toP = to
+
+  # step 1: where did my thing go?
+  # they moved around it
+  if from > otherFrom
+    fromP--
+  if from > otherTo
+    fromP++
+  else if from == otherTo
+    if otherFrom > otherTo
+      fromP++
+      if from == to # ugh, again
+        toP++
+
+  # step 2: where am i going to put it?
+  if to > otherFrom
+    toP--
+  else if to == otherFrom
+    if to > from
+      toP--
+  if to > otherTo
+    toP++
+  else if to == otherTo
+    # if we're both moving in the same direction, tie break
+    if (otherTo > otherFrom and to > from) or
+       (otherTo < otherFrom and to < from)
+      if type == 'right'
+        toP++
+    else
+      if to > from
+        toP++
+      else if to == otherFrom
+        toP--
+  return {from:fromP, to:toP}
 
 # ops are: s,+,d,i,x,m. 36 cases, 12 trivial = 24.
 transform = (c, oc, type) ->
@@ -172,8 +216,13 @@ transform = (c, oc, type) ->
           if p?
             return {d:p}
       when def(c.m)
-        # what do if i move a from inside b to outside b, and b is deleted?
-        throw 'ahhh'
+        # if i try to move something but it got deleted, there's nothing left
+        # to move.
+        from = updatePathForD c.m, oc.d
+        if from?
+          to = updatePathForD c.to, oc.d
+          if to?
+            return {m:from,to}
   else if def(oc.i)
     switch
       when def c.i
@@ -191,7 +240,9 @@ transform = (c, oc, type) ->
         p = updatePathForI c.d, oc.at
         return {d:p}
       when def(c.m)
-        throw 'ahhh'
+        from = updatePathForI c.m, oc.at
+        to = updatePathForI c.to, oc.at
+        return {m:from, to}
   else if def(oc.x)
     switch
       when typeof c.x != 'undefined'
