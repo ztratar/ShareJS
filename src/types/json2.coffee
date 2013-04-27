@@ -74,6 +74,8 @@ json.apply = (snapshot, op) ->
         elem.splice key, 0, clone c.i
       else
         if key of elem
+          util = require 'util'
+          util.debug util.format '%j, %j', key, elem
           throw new Error "can't insert over existing key. use x instead."
         elem[key] = clone c.i
 
@@ -270,17 +272,81 @@ transform = (c, oc, type) ->
         if p?
           return c
       when def(c.m)
-        throw 'ahhh'
+        from = updatePathForD c.m, oc.at
+        if from?
+          to = updatePathForD c.to, oc.at
+          if to?
+            return c
+          else
+            return {d:c.m}
   else if def(oc.m)
-    throw 'ahhh'
+    return c if arrayEq oc.m, oc.to
+    switch
+      when def c.i
+        if typeof last(c.at) is 'number'
+          p = c.at[..]
+          if oc.m.isPrefixOf init(p)
+            p = oc.to.concat p[oc.m.length..]
+          else
+            if arrayEq init(c.at), init(oc.m)
+              if last(oc.m) < last(c.at)
+                p[p.length-1]--
+            if arrayEq init(c.at), init(oc.to)
+              if last(oc.to) < last(c.at)
+                p[p.length-1]++
+          return {i:c.i,at:p}
+        else
+          p = updatePathForM c.at, oc.m, oc.to
+          if p?
+            return {i:c.i,at:p}
+      when c.at # s, +, x
+        p = updatePathForM c.at, oc.m, oc.to
+        if p
+          return merge c, {at:p}
+      when c.d
+        p = updatePathForM c.d, oc.m, oc.to
+        if p?
+          return {d:p}
+      when def c.m
+        if arrayEq c.m, oc.m
+          if type is 'left'
+            return {m:oc.to,to:c.to}
+          else
+            return
+
+        if typeof last(c.m) is 'number' and arrayEq(init(c.m), init(c.to)) and arrayEq(init(c.m), init(oc.m)) and arrayEq(init(c.m), init(oc.to))
+          # both c and oc are operating in the same array. lm vs lm, here we go.
+          {from, to} = updateLMForLM last(c.m), last(c.to), last(oc.m), last(oc.to), type
+          return {m:init(c.m).concat([from]), to:init(c.to).concat([to])}
+
+        if typeof last(c.to) isnt 'number'
+          if arrayEq(c.to, oc.to)
+            # both moving to the same key in an object, tie-break.
+            from = updatePathForM c.m, oc.m, oc.to
+            return unless from?
+            if type is 'left' or c.to.isPrefixOf oc.m
+              # my op wins
+              return {m:from,to:c.to}
+            else
+              return {d:from}
+          else if arrayEq(c.m, oc.to)
+            if arrayEq(c.to, oc.m)
+              # a swap collides; neither side has enough info to reconstruct.
+              return {d:c.m}
+
+
+        from = updatePathForM c.m, oc.m, oc.to
+        to = updatePathForM c.to, oc.m, oc.to
+        if from and to
+          return {m:from,to}
 
 json.transformComponent = (dest, c, otherC, type) ->
   c_ = transform c, otherC, type
   if c_?
     json.append dest, clone c_
 
-  #util = require 'util'
-  #util.debug util.format '%j against %j (%s) gives %j', c, otherC, type, c_
+  util = require 'util'
+  util.debug util.format '%j against %j (%s) gives %j', c, otherC, type, c_
   return dest
 
 

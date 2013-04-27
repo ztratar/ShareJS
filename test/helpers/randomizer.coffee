@@ -1,8 +1,8 @@
 assert = require 'assert'
 helpers = require './misc'
 util = require 'util'
-p = -> #util.debug
-i = -> #(o) -> util.inspect o, false, 5, true
+p = util.debug
+i = (o) -> util.inspect o, false, 5, true
 
 {randomInt, randomReal, seed} = helpers
 
@@ -10,6 +10,7 @@ clone = (o) -> JSON.parse(JSON.stringify(o))
 
 # Returns client result
 testRandomOp = (type, initialDoc = type.create()) ->
+  util.debug("\n\n\n\n\n\n\n\n")
   makeDoc = -> {
       ops: []
       result: initialDoc
@@ -43,6 +44,7 @@ testRandomOp = (type, initialDoc = type.create()) ->
       assert.deepEqual doc_clone.result, doc.result, 'result'
 
     checkSnapshotsEq s, doc.result
+
   
   testApply set for set in opSets
 
@@ -72,15 +74,21 @@ testRandomOp = (type, initialDoc = type.create()) ->
         checkSnapshotsEq doc.result, type.apply initialDoc, doc.composed
 
     compose set for set in opSets
+    p 'B'
 
     testInvert? set, [set.composed] for set in opSets when set.composed?
+    p 'C'
   
     # Check the diamond property holds
     if client.composed? && server.composed?
       [server_, client_] = helpers.transformX type, server.composed, client.composed
 
+      p 'D'
       s_c = type.apply server.result, client_
+      p 'E'
+      p "#{i client.result}, #{i server_}"
       c_s = type.apply client.result, server_
+      p 'F'
 
       # Interestingly, these will not be the same as s_c and c_s above.
       # Eg, when:
@@ -110,12 +118,18 @@ testRandomOp = (type, initialDoc = type.create()) ->
   # Now we'll check the n^2 transform method.
   if client.ops.length > 0 && server.ops.length > 0
     p 'TP2'
-    p "s #{i server.result} c #{i client.result} XF #{i server.ops} x #{i client.ops}"
+    p "\n# initial is #{JSON.stringify initialDoc}\ns_result = #{i server.result}\nc_result = #{i client.result}\ns_ops = #{i server.ops}\nc_ops = #{i client.ops}"
     [s_, c_] = helpers.transformLists type, server.ops, client.ops
     p "XF result #{i s_} x #{i c_}"
 #    p "applying #{i c_} to #{i server.result}"
-    s_c = c_.reduce type.apply, server.result
-    c_s = s_.reduce type.apply, client.result
+    s_c = server.result
+    for cop in c_
+      p "applying #{i cop} to #{i s_c}"
+      s_c = type.apply s_c, cop
+    c_s = client.result
+    for sop in s_
+      p "applying #{i sop} to #{i c_s}"
+      c_s = type.apply c_s, sop
 
     checkSnapshotsEq s_c, c_s
 

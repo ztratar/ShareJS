@@ -27,7 +27,7 @@ write = ->
         timeout = null
       , 1000
 
-client.open argv.d, 'text', argv.url, (d, error) ->
+client.open argv.d, 'text', argv.url, (err, d) ->
 	doc = d
 	console.log('Document ' + argv.d + ' open at version ' + doc.version)
 
